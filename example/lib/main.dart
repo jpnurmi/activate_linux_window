@@ -1,48 +1,20 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:activate_window/activate_window.dart';
+import 'package:flutter/material.dart';
+
+const methodChannel = MethodChannel('activate_window');
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
-
-  @override
-  void initState() {
-    super.initState();
-    initPlatformState();
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion =
-          await ActivateWindow.platformVersion ?? 'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
+  void _activateWindowLater() {
+    Timer(const Duration(seconds: 3), () {
+      methodChannel.invokeMethod('activateWindow');
     });
   }
 
@@ -51,10 +23,32 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('Activate Linux window'),
         ),
         body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('1. Click the button and switch to another app.'),
+              const SizedBox(height: 16),
+              const Text('2. A window activation request is sent in 3s.'),
+              const SizedBox(height: 48),
+              ElevatedButton(
+                onPressed: _activateWindowLater,
+                child: const Text('Activate'),
+              ),
+              const SizedBox(height: 48),
+            ],
+          ),
+        ),
+        bottomNavigationBar: const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            // https://gitlab.gnome.org/GNOME/gtk/-/issues/624
+            'It is up to the window manager to decide whether the window '
+            'activation request is handled by bringing the window to front, '
+            'or by showing a "the app is ready" banner (most likely the latter).',
+          ),
         ),
       ),
     );
