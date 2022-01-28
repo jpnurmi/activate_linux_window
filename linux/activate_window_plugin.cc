@@ -18,18 +18,15 @@ G_DEFINE_TYPE(ActivateWindowPlugin, activate_window_plugin, g_object_get_type())
 
 // Called when a method call is received from Flutter.
 static void activate_window_plugin_handle_method_call(
-    ActivateWindowPlugin* self,
+    GtkWidget* window,
     FlMethodCall* method_call) {
   g_autoptr(FlMethodResponse) response = nullptr;
 
   const gchar* method = fl_method_call_get_name(method_call);
 
-  if (strcmp(method, "getPlatformVersion") == 0) {
-    struct utsname uname_data = {};
-    uname(&uname_data);
-    g_autofree gchar *version = g_strdup_printf("Linux %s", uname_data.version);
-    g_autoptr(FlValue) result = fl_value_new_string(version);
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+  if (strcmp(method, "activateWindow") == 0) {
+    gtk_window_present_with_time(GTK_WINDOW(window), GDK_CURRENT_TIME);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   } else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }
@@ -49,13 +46,16 @@ static void activate_window_plugin_init(ActivateWindowPlugin* self) {}
 
 static void method_call_cb(FlMethodChannel* channel, FlMethodCall* method_call,
                            gpointer user_data) {
-  ActivateWindowPlugin* plugin = ACTIVATE_WINDOW_PLUGIN(user_data);
-  activate_window_plugin_handle_method_call(plugin, method_call);
+  GtkWidget* window = GTK_WIDGET(user_data);
+  activate_window_plugin_handle_method_call(window, method_call);
 }
 
 void activate_window_plugin_register_with_registrar(FlPluginRegistrar* registrar) {
   ActivateWindowPlugin* plugin = ACTIVATE_WINDOW_PLUGIN(
       g_object_new(activate_window_plugin_get_type(), nullptr));
+
+  FlView* view = fl_plugin_registrar_get_view(registrar);
+  GtkWidget* window = gtk_widget_get_toplevel(GTK_WIDGET(view));
 
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
   g_autoptr(FlMethodChannel) channel =
@@ -63,8 +63,8 @@ void activate_window_plugin_register_with_registrar(FlPluginRegistrar* registrar
                             "activate_window",
                             FL_METHOD_CODEC(codec));
   fl_method_channel_set_method_call_handler(channel, method_call_cb,
-                                            g_object_ref(plugin),
-                                            g_object_unref);
+                                            window,
+                                            nullptr);
 
   g_object_unref(plugin);
 }
